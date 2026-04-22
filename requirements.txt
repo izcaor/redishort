@@ -36,3 +36,4 @@ python-jose[cryptography]
 passlib[bcrypt]
 bcrypt==4.0.1
 python-multipart
+boto3>=1.34.0
