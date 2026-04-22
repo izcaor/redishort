@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.database import models
+from app.api.auth import get_current_user
 from pydantic import BaseModel
 from app.content_ingester import ContentIngester
 
@@ -16,13 +17,14 @@ class RSSIngestRequest(BaseModel):
     name: str
 
 @router.post("/sources/url")
-def ingest_url(req: URLIngestRequest, db: Session = Depends(get_db)):
+def ingest_url(req: URLIngestRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     item = ingester.fetch_url(req.url)
     if not item:
         raise HTTPException(status_code=400, detail="Could not extract content from URL")
 
     project = models.VideoProject(
-        source_id=item.source_id,
+        user_id=current_user.id,
+                    source_id=item.source_id,
         source_type=item.source_type,
         title=item.title,
         content_text=item.content_text,
@@ -36,16 +38,16 @@ def ingest_url(req: URLIngestRequest, db: Session = Depends(get_db)):
     return {"message": "URL ingested successfully", "project_id": project.id}
 
 @router.post("/sources/rss")
-def add_rss_source(req: RSSIngestRequest, db: Session = Depends(get_db)):
-    source = models.ContentSource(source_type="rss", source_url=req.url, name=req.name)
+def add_rss_source(req: RSSIngestRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    source = models.ContentSource(user_id=current_user.id, source_type="rss", source_url=req.url, name=req.name)
     db.add(source)
     db.commit()
     db.refresh(source)
     return {"message": "RSS source added", "source_id": source.id}
 
 @router.post("/sources/{source_id}/fetch")
-def fetch_source_now(source_id: int, db: Session = Depends(get_db)):
-    source = db.query(models.ContentSource).filter(models.ContentSource.id == source_id).first()
+def fetch_source_now(source_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    source = db.query(models.ContentSource).filter(models.ContentSource.id == source_id, models.ContentSource.user_id == current_user.id).first()
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
 
@@ -53,9 +55,10 @@ def fetch_source_now(source_id: int, db: Session = Depends(get_db)):
         items = ingester.fetch_rss_feed(source.source_url)
         projects_created = 0
         for item in items:
-            exists = db.query(models.VideoProject).filter(models.VideoProject.source_id == item.source_id).first()
+            exists = db.query(models.VideoProject).filter(models.VideoProject.source_id == item.source_id, models.VideoProject.user_id == current_user.id).first()
             if not exists:
                 project = models.VideoProject(
+                    user_id=current_user.id,
                     source_id=item.source_id,
                     source_type=item.source_type,
                     title=item.title,
@@ -69,3 +72,8 @@ def fetch_source_now(source_id: int, db: Session = Depends(get_db)):
         db.commit()
         return {"message": f"Fetched {len(items)} items, created {projects_created} new projects"}
     raise HTTPException(status_code=400, detail="Unsupported source type")
+
+@router.get("/sources")
+def list_sources(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    sources = db.query(models.ContentSource).filter(models.ContentSource.user_id == current_user.id).all()
+    return sources

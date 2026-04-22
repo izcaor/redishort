@@ -1,41 +1,16 @@
-version: '3.8'
-
 services:
-  redis:
-    image: redis:alpine
-    container_name: redishort_redis
-    ports:
-      - "6379:6379"
-
-  api:
+  redishort:
     build: .
-    container_name: redishort_api
+    container_name: redishort
     restart: always
     env_file:
       - .env
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - DATABASE_URL=sqlite:///./redishort.db
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    depends_on:
-      - redis
-
-  worker:
-    build: .
-    container_name: redishort_worker
-    restart: always
-    env_file:
-      - .env
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - DATABASE_URL=sqlite:///./redishort.db
-    volumes:
-      - .:/app
-    command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
-    depends_on:
-      - redis
-      - api
+      - "8080:8080"
+    command: ["python", "main.py"]
