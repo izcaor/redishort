@@ -32,3 +32,4 @@ alembic
 psycopg2-binary
 feedparser
 beautifulsoup4
+boto3>=1.34.0

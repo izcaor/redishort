@@ -38,7 +38,7 @@ class VideoProject(Base):
     youtube_desc = Column(Text, nullable=True)
     narrator_gender = Column(String, nullable=True)
 
-    video_path = Column(String, nullable=True)
+    video_s3_url = Column(String, nullable=True)
     error_message = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

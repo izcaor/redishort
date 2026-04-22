@@ -1,4 +1,6 @@
 import logging
+import os
+import boto3
 from sqlalchemy.orm import Session
 from app.database import models
 from app.models.domain import ContentItem
@@ -85,8 +87,30 @@ def run_video_generation_pipeline(project_id: int, db: Session):
         assemble_viral_video(bg_segment, str(audio_path), str(output_video_path), whisper_model, project.narrator_gender)
 
         if output_video_path.exists() and output_video_path.stat().st_size > 1024:
-             project.video_path = str(output_video_path)
+             # S3 Upload logic
+             aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+             aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+             bucket_name = os.getenv("AWS_BUCKET_NAME")
+
+             if not bucket_name:
+                 raise Exception("AWS_BUCKET_NAME is not set")
+
+             s3_client = boto3.client(
+                 's3',
+                 aws_access_key_id=aws_access_key_id,
+                 aws_secret_access_key=aws_secret_access_key
+             )
+
+             object_name = f"project_{project.id}_final.mp4"
+             s3_client.upload_file(str(output_video_path), bucket_name, object_name)
+
+             s3_url = f"https://{bucket_name}.s3.amazonaws.com/{object_name}"
+
+             project.video_s3_url = s3_url
              project.status = models.WorkflowState.COMPLETED
+
+             # Clean up local file
+             output_video_path.unlink()
         else:
              raise Exception("Video assembly failed or output is empty")
 
