@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.database import models
 from pydantic import BaseModel
-from app.workflow import trigger_drafting, trigger_generation_task
-import threading
+from app.workflow import trigger_drafting, run_video_generation_pipeline
+
 
 router = APIRouter()
 
@@ -15,7 +15,7 @@ class UpdateScriptRequest(BaseModel):
     narrator_gender: str
 
 @router.post("/projects/{project_id}/draft")
-def start_drafting(project_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def start_drafting(project_id: int, db: Session = Depends(get_db)):
     project = db.query(models.VideoProject).filter(models.VideoProject.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -24,7 +24,7 @@ def start_drafting(project_id: int, background_tasks: BackgroundTasks, db: Sessi
 
     project.status = models.WorkflowState.DRAFTING
     db.commit()
-    background_tasks.add_task(trigger_drafting, project_id, db)
+    trigger_drafting.delay(project_id)
     return {"message": "Drafting started"}
 
 @router.put("/projects/{project_id}/draft")
@@ -50,6 +50,5 @@ def approve_and_generate(project_id: int, db: Session = Depends(get_db)):
     if project.status != models.WorkflowState.PENDING_APPROVAL:
         raise HTTPException(status_code=400, detail="Project must be pending approval to generate video")
 
-    thread = threading.Thread(target=trigger_generation_task, args=(project_id,))
-    thread.start()
+    run_video_generation_pipeline.delay(project_id)
     return {"message": "Video generation started"}
