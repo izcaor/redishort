@@ -69,7 +69,7 @@ function Dashboard() {
                   </Link>
                 ) : (
                   <button disabled className="w-full inline-flex justify-center items-center px-4 py-2 rounded-full font-bold text-on-surface-variant bg-surface-container-high cursor-not-allowed">
-                    {project.status === 'completed' ? 'Published' : 'Processing...'}
+                    {project.status === 'completed' ? (project.video_s3_url ? <a href={project.video_s3_url} target='_blank' rel='noreferrer' className='text-on-surface hover:text-primary'>View Video</a> : 'Completed') : 'Processing...'}
                   </button>
                 )}
               </div>
