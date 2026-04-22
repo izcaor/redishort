@@ -69,3 +69,8 @@ def fetch_source_now(source_id: int, db: Session = Depends(get_db)):
         db.commit()
         return {"message": f"Fetched {len(items)} items, created {projects_created} new projects"}
     raise HTTPException(status_code=400, detail="Unsupported source type")
+
+@router.get("/sources")
+def list_sources(db: Session = Depends(get_db)):
+    sources = db.query(models.ContentSource).all()
+    return sources
