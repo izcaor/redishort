@@ -9,6 +9,7 @@ import random
 import logging
 import time
 import requests
+from app.models.domain import ContentItem
 from pathlib import Path
 from config import (
     ALL_SUBREDDITS, PROCESSED_POSTS_FILE, NUM_HOT_SUBREDDITS_TO_HUNT,
@@ -166,7 +167,7 @@ class RedditScraper:
             "subreddit": subreddit
         }
 
-    def get_best_stories(self, num_stories: int = 1) -> list[dict]:
+    def get_best_stories(self, num_stories: int = 1) -> list[ContentItem]:
         """
         Main entry point. Find and return the best stories.
         Uses temperature-based subreddit selection and multi-timeframe scanning.

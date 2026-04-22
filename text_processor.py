@@ -13,6 +13,7 @@ from typing import Optional, Any, Type, Literal, List
 from pathlib import Path
 import google.generativeai as genai
 from pydantic import BaseModel, Field, ValidationError
+from app.models.domain import ContentItem
 from config import LLM_PROVIDERS
 
 logger = logging.getLogger(__name__)
@@ -135,16 +136,16 @@ class TextProcessor:
             logger.error(f"JSON parse error: {e}")
             return None
 
-    def process_story(self, story_text: str) -> Optional[dict[str, Any]]:
+    def process_story(self, item: ContentItem) -> Optional[dict[str, Any]]:
         """
         Main entry point. Process a story through the full pipeline.
         Returns a content pack with script, descriptions, and metadata.
         """
-        if not story_text:
+        if not item or not item.content_text:
             return None
 
         logger.info("-> Generating script and metadata...")
-        script_prompt = self.prompts["full_script"].format(story_text=story_text)
+        script_prompt = self.prompts["full_script"].format(story_text=f"{item.title}\n\n{item.content_text}")
         script_data = self._parse_and_validate_json(
             self._call_llm_with_fallback(script_prompt),
             ScriptResponse

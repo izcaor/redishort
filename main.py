@@ -164,12 +164,12 @@ def main_loop():
                 time.sleep(900); continue
 
             story = stories[0]
-            story_id, story_title = story['id'], story['title']
+            story_id, story_title = story.source_id, story.title
             story_folder = session_folder / f"story_{story_id}"
             story_folder.mkdir(exist_ok=True)
 
             logger.info(f">>> Producing video for story: '{story_title[:60]}...'")
-            content_pack = text_processor.process_story(story["story_text"])
+            content_pack = text_processor.process_story(story)
             if not content_pack or not content_pack.get("descriptions"):
                 logger.error(f"Failed to process text for {story_id}. Searching new story."); continue
 
@@ -200,7 +200,7 @@ def main_loop():
 
                 yt_title = content_pack["descriptions"]["youtube_short_title"]
                 yt_desc = content_pack["descriptions"]["youtube_short_desc"]
-                yt_tags = ["reddit", "stories", "askreddit", "storytime", story["subreddit"]]
+                yt_tags = ["reddit", "stories", "askreddit", "storytime", story.metadata.get("subreddit", "story")]
 
                 video_id = upload_to_youtube(
                     video_path=output_video_path, title=yt_title, description=yt_desc,
