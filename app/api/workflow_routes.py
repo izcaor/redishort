@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.database import models
-from app.api.auth import get_current_user
 from pydantic import BaseModel
 from app.workflow import trigger_drafting, trigger_generation_task
+from app.api.auth import get_current_user
 import threading
 
 router = APIRouter()
@@ -16,8 +16,15 @@ class UpdateScriptRequest(BaseModel):
     narrator_gender: str
 
 @router.post("/projects/{project_id}/draft")
-def start_drafting(project_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    project = db.query(models.VideoProject).filter(models.VideoProject.id == project_id, models.VideoProject.user_id == current_user.id).first()
+def start_drafting(
+    project_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    project = db.query(models.VideoProject)\
+        .filter(models.VideoProject.id == project_id, models.VideoProject.user_id == current_user.id)\
+        .first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if project.status not in (models.WorkflowState.NEW, models.WorkflowState.FAILED):
@@ -29,8 +36,15 @@ def start_drafting(project_id: int, background_tasks: BackgroundTasks, db: Sessi
     return {"message": "Drafting started"}
 
 @router.put("/projects/{project_id}/draft")
-def update_draft(project_id: int, req: UpdateScriptRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    project = db.query(models.VideoProject).filter(models.VideoProject.id == project_id, models.VideoProject.user_id == current_user.id).first()
+def update_draft(
+    project_id: int,
+    req: UpdateScriptRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    project = db.query(models.VideoProject)\
+        .filter(models.VideoProject.id == project_id, models.VideoProject.user_id == current_user.id)\
+        .first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if project.status != models.WorkflowState.PENDING_APPROVAL:
@@ -44,8 +58,14 @@ def update_draft(project_id: int, req: UpdateScriptRequest, db: Session = Depend
     return {"message": "Draft updated"}
 
 @router.post("/projects/{project_id}/approve")
-def approve_and_generate(project_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    project = db.query(models.VideoProject).filter(models.VideoProject.id == project_id, models.VideoProject.user_id == current_user.id).first()
+def approve_and_generate(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    project = db.query(models.VideoProject)\
+        .filter(models.VideoProject.id == project_id, models.VideoProject.user_id == current_user.id)\
+        .first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if project.status != models.WorkflowState.PENDING_APPROVAL:
