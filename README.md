@@ -1,85 +1,51 @@
-# Redishort 🤖 - Autonomous YouTube Shorts Creator
+# The Kinetic Curator 🎬 - SaaS Short-Form Video Generator
 
 ![Logo](redishort.png)
 
-> ⚠️ **Project Status: Archived**
-> This project was fully functional from June-August 2025 but is currently non-operational due to Reddit API policy changes. The codebase is preserved for portfolio demonstration and potential future adaptation.
+> 🚀 **Project Status: SaaS Pivot Complete**
+> Originally built as an autonomous Reddit-to-YouTube bot, this project has been fully transformed into a robust, multi-tenant SaaS application. It allows users to ingest content from any web article or RSS feed, review AI-generated scripts, and render viral short-form videos in the cloud.
 
 ---
 
-## 📊 Real-World Results
+## 💼 Technical Architecture (v2)
 
-This wasn't just a side project — **it worked in production**:
+This project has been rebuilt from the ground up to support scale, human-in-the-loop approvals, and multi-tenant security.
 
-| Metric               | Value                                      |
-| -------------------- | ------------------------------------------ |
-| **Total Views**      | 200,000 - 300,000+                         |
-| **Timeframe**        | 2 months                                   |
-| **Platforms**        | YouTube, TikTok, Facebook, Instagram       |
-| **Infrastructure**   | Self-hosted Docker on personal laptop      |
-| **Automation Level** | 100% autonomous (content hunting → upload) |
-
-### 🔗 Live Proof
-
-**YouTube Channel**: [@reditoktv](https://www.youtube.com/@reditoktv)
-
-All videos on this channel were generated and uploaded **completely autonomously** by this bot.
+| Category               | Technologies & Skills                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| **Frontend**           | React 18, Vite, TailwindCSS (Vivid Flux / Kinetic Curator design system), Axios, React Router |
+| **Backend API**        | FastAPI, Pydantic (v2), JWT Authentication, Passlib (bcrypt)                                  |
+| **Database**           | PostgreSQL (via SQLAlchemy & Alembic), Multi-tenant (User isolation)                          |
+| **Asynchronous Tasks** | Celery, Redis (Message Broker)                                                                |
+| **Cloud Storage**      | AWS S3 (via Boto3) for scalable video asset storage                                           |
+| **AI/ML Pipeline**     | LLM (Gemini), Speech-to-Text (Whisper), Text-to-Speech (Coqui TTS)                            |
+| **Video Processing**   | MoviePy, FFmpeg, Dynamic Subtitles, Background Segmenting                                     |
+| **DevOps**             | Docker, Docker Compose (Multi-container: API, Celery Worker, Redis)                           |
 
 ---
 
-## 💼 Technical Highlights
+## 🎯 How It Works
 
-This project demonstrates proficiency in:
-
-| Category             | Technologies & Skills                                                          |
-| -------------------- | ------------------------------------------------------------------------------ |
-| **Python**           | Pydantic, Type Hints, Context Managers, Threading, Decorators                  |
-| **APIs**             | Reddit API, YouTube Data API v3, Google Gemini, OpenAI Whisper                 |
-| **AI/ML**            | LLM Integration (Gemini), Speech-to-Text (Whisper), Text-to-Speech (Coqui TTS) |
-| **Video Processing** | MoviePy, FFmpeg, Dynamic Subtitles, Progress Bar Animation                     |
-| **DevOps**           | Docker, Docker Compose, Environment Management                                 |
-| **Architecture**     | Modular Design, Separation of Concerns, Resource Management                    |
-
----
-
-## 🎯 What It Does
-
-**Redishort** is an automation system that transforms viral Reddit stories into engaging YouTube Shorts videos. It manages the entire production pipeline autonomously:
+The system operates on an event-driven **State Machine Workflow**:
 
 ```mermaid
 graph TD
-    A[🔍 Hunt Story on Reddit] --> B[✍️ Generate Script with AI]
-    B --> C[🎙️ Synthesize Voice TTS]
-    C --> D[🎬 Assemble Final Video]
-    D --> E[📤 Upload & Schedule to YouTube]
+    A[🌐 Ingest RSS/URL] -->|User| B[📝 Draft Project]
+    B -->|FastAPI| C(AI Generates Script & Metadata)
+    C -->|Celery Task| D[⏳ Pending Approval]
+    D -->|User Review via React UI| E[⚙️ Processing]
+    E -->|Celery Worker + FFmpeg| F[☁️ Upload to S3]
+    F --> G[✅ Completed]
 ```
 
-### ✨ Key Features
+### ✨ Key SaaS Features
 
-| Feature                       | Description                                                      |
-| ----------------------------- | ---------------------------------------------------------------- |
-| 🧠 **Smart Content Hunting**  | Analyzes subreddit "temperature" to find high-potential stories  |
-| 🎯 **Retention Optimization** | Word-by-word subtitles with karaoke effect and neon progress bar |
-| 🗣️ **Dynamic Voices**         | Realistic voice cloning using Coqui TTS with gender variation    |
-| 🐳 **Dockerized**             | Simple consistent deployment with one command                    |
-
----
-
-## 🔧 What Would Need to Change (For Future Resumption)
-
-The project stopped working due to **Reddit API restrictions**. To resume:
-
-| Component            | Current State           | Required Change                                                                                   |
-| -------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| **Reddit Scraper**   | Uses PRAW (Reddit API)  | Switch to alternative: web scraping, or use different content sources (Twitter/X, news RSS, etc.) |
-| **Story Validation** | Reddit-specific filters | Adapt to new content source format                                                                |
-| **YouTube API**      | OAuth tokens expired    | Re-authenticate with fresh tokens                                                                 |
-
-**Alternative Pivot Ideas:**
-
-- Adapt for Twitter/X viral tweets
-- Use news headlines as content source
-- Integrate with content aggregators
+| Feature                       | Description                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| 🛡️ **Multi-Tenant Auth**      | JWT login/register. Users securely manage only their own sources and videos.   |
+| 🧠 **Multi-Source Ingestion** | Generic `ContentItem` model ingests direct URLs (BeautifulSoup) or RSS feeds.  |
+| 👁️ **Human-in-the-loop**      | React Dashboard to review, edit, and approve AI scripts before heavy rendering.|
+| ⚡ **Distributed Rendering**   | Video creation is offloaded to Celery workers backed by Redis.                 |
 
 ---
 
@@ -87,90 +53,60 @@ The project stopped working due to **Reddit API restrictions**. To resume:
 
 ```
 Redishort/
-├── assets/
-│   ├── fonts/
-│   ├── voice_samples/
-│   │   ├── male/
-│   │   └── female/
-│   ├── raw_videos/
-│   ├── segments/
-│   └── sessions/
-├── prompts/
-│   ├── full_script_prompt.txt
-│   └── viral_descriptions_prompt.txt
-├── config.py           # Central configuration
-├── main.py             # Main orchestrator
-├── reddit_scraper.py   # Reddit API interface
-├── text_processor.py   # LLM script generation
-├── tts_generator.py    # Text-to-speech
-├── video_assembler.py  # Video composition
-├── video_downloader.py # Background video download
-├── video_segmenter.py  # Video processing
-├── youtube_uploader.py # YouTube API upload
-└── auth.py             # OAuth setup
+├── app/                    # Backend (FastAPI + Celery + SQLAlchemy)
+│   ├── api/                # REST endpoints (auth, sources, workflow)
+│   ├── database/           # Models and DB connection
+│   ├── models/             # Pydantic generic domain models
+│   ├── celery_app.py       # Celery initialization
+│   ├── content_ingester.py # URL/RSS Web Scraper
+│   └── workflow.py         # Stateful video generation logic
+├── frontend/               # Frontend (React + Vite)
+│   ├── src/
+│   │   ├── App.jsx         # Routing & Auth State
+│   │   ├── Dashboard.jsx   # Projects & Sources View
+│   │   ├── VideoReview.jsx # Script Editor & Approval UI
+│   │   ├── Login.jsx       # Auth
+│   │   └── Register.jsx    # Auth
+├── assets/                 # Fonts, TTF, and Voice Samples
+├── prompts/                # LLM AI instructions
+├── text_processor.py       # AI Script Generation bridge
+├── tts_generator.py        # Text-to-speech voice cloning
+├── video_assembler.py      # MoviePy rendering logic
+└── docker-compose.yml      # Multi-container local orchestration
 ```
 
 ---
 
-## 🚀 Development Setup (For Reference)
-
-<details>
-<summary>Click to expand installation instructions</summary>
+## 🚀 Development Setup
 
 ### Prerequisites
+- Docker & Docker Compose
+- Node.js & npm (for local frontend development)
 
-- Git
-- Docker
-- Docker Compose
-
-### Installation
-
-#### 1️⃣ Clone the Repository
-
-```bash
-git clone https://github.com/izan-co/Redishort.git
-cd Redishort
-```
-
-#### 2️⃣ Configure Environment Variables
-
+### 1️⃣ Configure Environment
 ```bash
 cp .env.example .env
 ```
+> Fill in your `SECRET_KEY`, `DATABASE_URL` (defaults to sqlite for dev), Redis URL, AWS S3 credentials, and Gemini API keys.
 
-> 💡 Open `.env` and fill in your credentials for Reddit and Google Gemini.
-
-#### 3️⃣ Prepare Assets
-
-- **Voice Samples**: Place `.wav` files in `assets/voice_samples/male/` and `assets/voice_samples/female/`
-- **YouTube Credentials**: Download `client_secret.json` from Google Cloud Console
-
-#### 4️⃣ YouTube Authorization
-
-```bash
-docker-compose run --rm redishort python auth.py
-```
-
-#### 5️⃣ Launch
-
+### 2️⃣ Launch Backend Infrastructure (API, Celery, Redis)
 ```bash
 docker-compose up --build -d
 ```
+> FastAPI will be available at `http://localhost:8000`
 
-</details>
-
----
-
-## ⚠️ Disclaimer
-
-This project was created for **educational purposes** and personal task automation. Compliance with platform Terms of Service and content copyright is the user's responsibility.
+### 3️⃣ Launch Frontend (Local)
+```bash
+cd frontend
+npm install
+npm run dev &
+```
+> The React App will be available at `http://localhost:5173`. It automatically proxies `/api` calls to the backend.
 
 ---
 
 <div align="center">
 
-**Built by Izan Cano** • Summer 2025
-
-[🔗 View Live Channel](https://www.youtube.com/@reditoktv)
+**Built by Izan Cano** • Upgraded to SaaS Architecture
 
 </div>
