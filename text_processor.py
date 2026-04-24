@@ -74,6 +74,8 @@ class GeminiProvider(LLMProvider):
 
 PROVIDER_MAP = {"gemini": GeminiProvider}
 
+_PROMPTS_CACHE: dict[str, str] = {}
+
 
 class TextProcessor:
     """
@@ -113,14 +115,17 @@ class TextProcessor:
 
     def _load_prompts(self) -> dict[str, str]:
         """Load prompt templates from files."""
+        global _PROMPTS_CACHE
+        if _PROMPTS_CACHE:
+            return _PROMPTS_CACHE
+
         prompt_dir = Path(__file__).resolve().parent / "prompts"
-        prompts = {}
         for p_type in ["full_script", "viral_descriptions"]:
             try:
-                prompts[p_type] = (prompt_dir / f"{p_type}_prompt.txt").read_text(encoding="utf-8")
+                _PROMPTS_CACHE[p_type] = (prompt_dir / f"{p_type}_prompt.txt").read_text(encoding="utf-8")
             except FileNotFoundError:
-                prompts[p_type] = ""
-        return prompts
+                _PROMPTS_CACHE[p_type] = ""
+        return _PROMPTS_CACHE
 
     def _parse_and_validate_json(self, response_text: str, validation_model: Type[BaseModel]) -> Optional[dict]:
         """Parse JSON response and validate against Pydantic model."""
