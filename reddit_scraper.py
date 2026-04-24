@@ -9,6 +9,9 @@ import random
 import logging
 import time
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import concurrent.futures
 from app.models.domain import ContentItem
 from pathlib import Path
 from config import (
@@ -35,6 +38,17 @@ class RedditScraper:
 
     def __init__(self):
         self.session = requests.Session()
+
+        # Configure retry strategy for rate limiting resilience
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+
         self.processed_ids = self._load_processed_posts()
 
     def _get_headers(self) -> dict:
@@ -93,9 +107,24 @@ class RedditScraper:
         logger.info("--- Measuring subreddit temperature ---")
         temps = {}
 
-        for name in ALL_SUBREDDITS:
-            temps[name] = self._get_subreddit_temperature(name)
-            time.sleep(0.5)  # Rate limiting
+        def fetch_temperature(name: str) -> tuple[str, int]:
+            # Add a small staggered delay based on thread execution to avoid hitting Reddit
+            # all at the exact same millisecond.
+            time.sleep(random.uniform(0.1, 0.5))
+            try:
+                temp = self._get_subreddit_temperature(name)
+                return name, temp
+            except Exception as e:
+                logger.debug(f"Error fetching temperature for {name}: {e}")
+                return name, 0
+
+        # Execute temperature checks concurrently
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_subreddit = {executor.submit(fetch_temperature, name): name for name in ALL_SUBREDDITS}
+
+            for future in concurrent.futures.as_completed(future_to_subreddit):
+                name, temp = future.result()
+                temps[name] = temp
 
         hot_subs = sorted(temps, key=temps.get, reverse=True)[:NUM_HOT_SUBREDDITS_TO_HUNT]
         logger.info(f"Hunting in top {len(hot_subs)} subreddits: {', '.join(hot_subs[:5])}...")
