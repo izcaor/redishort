@@ -1,6 +1,9 @@
 import logging
 import feedparser
 import requests
+import socket
+import ipaddress
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from app.models.domain import ContentItem
 
@@ -10,9 +13,59 @@ class ContentIngester:
     def __init__(self):
         self.headers = {'User-Agent': 'Mozilla/5.0'}
 
+    def _is_safe_url(self, url: str) -> bool:
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme not in ('http', 'https'):
+                return False
+
+            hostname = parsed.hostname
+            if not hostname:
+                return False
+
+            # Get all resolved IPs
+            addr_infos = socket.getaddrinfo(hostname, None)
+            for addr_info in addr_infos:
+                ip = addr_info[4][0]
+                ip_obj = ipaddress.ip_address(ip)
+                if ip_obj.is_loopback or ip_obj.is_private or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_reserved:
+                    return False
+
+            return True
+        except Exception as e:
+            logger.error(f"Error validating URL {url}: {e}")
+            return False
+
+    def _safe_fetch(self, url: str):
+        current_url = url
+        for _ in range(5): # Max redirects
+            if not self._is_safe_url(current_url):
+                logger.error(f"Unsafe URL rejected: {current_url}")
+                return None
+            try:
+                response = requests.get(current_url, headers=self.headers, timeout=10, allow_redirects=False)
+                if response.is_redirect:
+                    location = response.headers.get('Location')
+                    if not location:
+                        return None
+                    from urllib.parse import urljoin
+                    current_url = urljoin(response.url, location)
+                    continue
+                response.raise_for_status()
+                return response
+            except Exception as e:
+                logger.error(f"Failed to fetch {current_url}: {e}")
+                return None
+        logger.error(f"Too many redirects for {url}")
+        return None
+
     def fetch_rss_feed(self, feed_url: str) -> list[ContentItem]:
         logger.info(f"Fetching RSS feed: {feed_url}")
-        feed = feedparser.parse(feed_url)
+        response = self._safe_fetch(feed_url)
+        if not response:
+            return []
+
+        feed = feedparser.parse(response.content)
         items = []
 
         if feed.bozo:
@@ -21,7 +74,10 @@ class ContentIngester:
 
         for entry in feed.entries[:5]:
             try:
-                content_text = self._scrape_article_text(entry.link)
+                link = entry.get('link')
+                if not link:
+                    continue
+                content_text = self._scrape_article_text(link)
                 if not content_text and hasattr(entry, 'summary'):
                     soup = BeautifulSoup(entry.summary, "html.parser")
                     content_text = soup.get_text(separator="\n", strip=True)
@@ -42,10 +98,11 @@ class ContentIngester:
         return items
 
     def fetch_url(self, url: str) -> ContentItem | None:
-        try:
-            response = requests.get(url, headers=self.headers, timeout=10)
-            response.raise_for_status()
+        response = self._safe_fetch(url)
+        if not response:
+            return None
 
+        try:
             soup = BeautifulSoup(response.content, "html.parser")
             title = soup.title.string if soup.title else ""
             if not title:
@@ -64,13 +121,14 @@ class ContentIngester:
                 metadata={"url": url}
             )
         except Exception as e:
-            logger.error(f"Failed to fetch URL {url}: {e}")
+            logger.error(f"Failed to process fetched URL content for {url}: {e}")
             return None
 
     def _scrape_article_text(self, url: str) -> str:
+        response = self._safe_fetch(url)
+        if not response:
+            return ""
         try:
-            response = requests.get(url, headers=self.headers, timeout=10)
-            response.raise_for_status()
             soup = BeautifulSoup(response.content, "html.parser")
             return self._extract_main_content(soup)
         except Exception:
