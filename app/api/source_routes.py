@@ -95,6 +95,11 @@ def fetch_source_now(
     raise HTTPException(status_code=400, detail="Unsupported source type")
 
 @router.get("/sources")
-def list_sources(db: Session = Depends(get_db)):
-    sources = db.query(models.ContentSource).all()
+def list_sources(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    sources = db.query(models.ContentSource)\
+        .filter(models.ContentSource.user_id == current_user.id)\
+        .all()
     return sources
