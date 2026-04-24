@@ -74,7 +74,7 @@ Current repository test suites:
 - `tests/test_reddit_scraper.py` → legacy Reddit filtering rules.
 - `tests/test_youtube_uploader.py` → upload behavior with mocked YouTube API client.
 
-Current state in a fresh environment: tests are present and runnable with `pytest`, but collection fails until optional runtime dependencies are installed (e.g. `feedparser`, `boto3`, Google API libs), and one legacy test module mocking strategy conflicts with `requests` imports.
+Current state in a fresh environment: tests are present and runnable with `pytest`, but collection fails until required dependencies are installed in the environment.
 
 Next practical coverage goals:
 
