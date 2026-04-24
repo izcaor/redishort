@@ -132,6 +132,10 @@ class RedditScraper:
 
     def _is_valid_post(self, post: dict) -> bool:
         """Check if a post meets the criteria for processing."""
+        if post.get('over_18'): return False
+        if post.get('is_video'): return False
+        if post.get('upvote_ratio', 0) < 0.8: return False
+
         post_id = post.get("id", "")
         selftext = post.get("selftext", "")
 
