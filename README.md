@@ -235,3 +235,16 @@ This project was created for **educational purposes** and personal task automati
 [🔗 View Live Channel](https://www.youtube.com/@reditoktv)
 
 </div>
+
+
+## 🧪 Testing
+
+Run tests in an isolated virtualenv with the lean test dependency set:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-test.txt
+pytest -q
+```
+

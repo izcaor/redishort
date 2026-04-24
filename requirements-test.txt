@@ -1,0 +1,20 @@
+# Minimal dependencies to run unit/integration tests in CI.
+# Keeps media/ML stack out of the test environment.
+
+pytest>=8.0
+pytest-mock>=3.12
+requests>=2.31.0
+feedparser>=6.0.11
+beautifulsoup4>=4.12.3
+fastapi>=0.110
+sqlalchemy>=2.0
+alembic>=1.13
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt==4.0.1
+python-multipart>=0.0.9
+
+# YouTube uploader imports
+google-api-python-client>=2.120
+google-auth-oauthlib>=1.2
+google-auth-httplib2>=0.2
