@@ -12,7 +12,7 @@ import logging
 from typing import Optional, Any, Type, Literal, List
 from pathlib import Path
 import google.generativeai as genai
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from app.models.domain import ContentItem
 from config import LLM_PROVIDERS
 
