@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.database.database import get_db
 from app.database import models
 from pydantic import BaseModel
@@ -47,6 +48,15 @@ def add_rss_source(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    existing_source = db.query(models.ContentSource)\
+        .filter(
+            models.ContentSource.user_id == current_user.id,
+            models.ContentSource.source_url == req.url
+        )\
+        .first()
+    if existing_source:
+        raise HTTPException(status_code=409, detail="RSS source already added for this user")
+
     source = models.ContentSource(
         user_id=current_user.id,
         source_type="rss",
@@ -54,7 +64,11 @@ def add_rss_source(
         name=req.name
     )
     db.add(source)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="RSS source already added for this user")
     db.refresh(source)
     return {"message": "RSS source added", "source_id": source.id}
 
@@ -95,6 +109,11 @@ def fetch_source_now(
     raise HTTPException(status_code=400, detail="Unsupported source type")
 
 @router.get("/sources")
-def list_sources(db: Session = Depends(get_db)):
-    sources = db.query(models.ContentSource).all()
+def list_sources(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    sources = db.query(models.ContentSource)\
+        .filter(models.ContentSource.user_id == current_user.id)\
+        .all()
     return sources
