@@ -197,10 +197,28 @@ cp .env.example .env
 #### 4️⃣ Launch
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d api
 ```
 
 The FastAPI backend will be available on `http://localhost:8080`.
+
+---
+
+## 🏃 Run modes
+
+Redishort supports two runtime modes, with **API mode as the default**:
+
+- **API mode (default, recommended)**
+  - Entry point: `app/main.py` (FastAPI app)
+  - Compose service: `api`
+  - Start command: `docker compose up --build -d api`
+  - Use this when running the React frontend and backend APIs together.
+
+- **Autonomous mode (legacy V1 bot loop)**
+  - Entry point: `main.py`
+  - Compose service/profile: `autonomous` under `--profile autonomous`
+  - Start command: `docker compose --profile autonomous up --build -d autonomous`
+  - Use this when you want the old fully automated script loop (scrape → generate → upload) without the frontend workflow.
 
 ---
 

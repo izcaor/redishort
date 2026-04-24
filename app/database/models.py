@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Enum, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -25,11 +25,14 @@ class User(Base):
 
 class ContentSource(Base):
     __tablename__ = "content_sources"
+    __table_args__ = (
+        UniqueConstraint("user_id", "source_url", name="uq_content_sources_user_id_source_url"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     source_type = Column(String, index=True, nullable=False)
-    source_url = Column(String, unique=True, index=True, nullable=False)
+    source_url = Column(String, index=True, nullable=False)
     name = Column(String, nullable=False)
     last_fetched_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
