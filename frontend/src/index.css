@@ -3,10 +3,25 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   body {
     @apply bg-background text-on-surface font-inter;
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(30, 207, 255, 0.2), transparent 34%),
+      radial-gradient(circle at 85% 0%, rgba(255, 122, 0, 0.2), transparent 28%),
+      linear-gradient(180deg, #031227 0%, #020b1d 100%);
+    min-height: 100vh;
   }
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-manrope;
   }
 }
