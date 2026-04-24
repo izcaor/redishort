@@ -109,8 +109,8 @@ If you're building new backend features, prefer adding functionality under `app/
 
 Run backend (Docker or local) and open interactive API docs:
 
-- Swagger UI: `http://localhost:8080/docs`
-- OpenAPI JSON: `http://localhost:8080/openapi.json`
+- Swagger UI: `http://localhost:8000/docs`
+- OpenAPI JSON: `http://localhost:8000/openapi.json`
 - Health check: `GET /health`
 
 Key endpoint groups (all mounted under `/api`):
@@ -200,7 +200,7 @@ cp .env.example .env
 docker compose up --build -d api
 ```
 
-The FastAPI backend will be available on `http://localhost:8080`.
+The FastAPI backend will be available on `http://localhost:8000`.
 
 ---
 
