@@ -1,25 +1,42 @@
-import pytest
+import importlib
 import sys
+import types
 from unittest.mock import MagicMock, patch
 
-# Mock dependencies before importing reddit_scraper
-mock_requests = MagicMock()
-sys.modules['requests'] = mock_requests
-sys.modules['app.models.domain'] = MagicMock()
+import pytest
 
-# Mock config before importing reddit_scraper
-mock_config = MagicMock()
-mock_config.MIN_POST_TEXT_LENGTH = 80
-sys.modules['config'] = mock_config
-
-from reddit_scraper import RedditScraper
 
 @pytest.fixture
-def scraper():
-    with patch('reddit_scraper.RedditScraper._load_processed_posts', return_value=set()):
-        # Ensure the constants are patched correctly in the reddit_scraper module
-        with patch('reddit_scraper.MIN_POST_TEXT_LENGTH', 80):
-            return RedditScraper()
+def scraper(monkeypatch):
+    mock_requests = types.ModuleType('requests')
+    mock_requests.Session = MagicMock
+
+    mock_requests_adapters = types.ModuleType('requests.adapters')
+    mock_requests_adapters.HTTPAdapter = MagicMock
+
+    monkeypatch.setitem(sys.modules, 'requests', mock_requests)
+    monkeypatch.setitem(sys.modules, 'requests.adapters', mock_requests_adapters)
+
+    mock_urllib3 = types.ModuleType('urllib3')
+    mock_urllib3_util = types.ModuleType('urllib3.util')
+    mock_urllib3_retry = types.ModuleType('urllib3.util.retry')
+    mock_urllib3_retry.Retry = MagicMock
+
+    monkeypatch.setitem(sys.modules, 'urllib3', mock_urllib3)
+    monkeypatch.setitem(sys.modules, 'urllib3.util', mock_urllib3_util)
+    monkeypatch.setitem(sys.modules, 'urllib3.util.retry', mock_urllib3_retry)
+    monkeypatch.setitem(sys.modules, 'app.models.domain', MagicMock())
+
+    mock_config = MagicMock()
+    mock_config.MIN_POST_TEXT_LENGTH = 80
+    monkeypatch.setitem(sys.modules, 'config', mock_config)
+
+    reddit_scraper = importlib.import_module('reddit_scraper')
+
+    with patch.object(reddit_scraper.RedditScraper, '_load_processed_posts', return_value=set()):
+        monkeypatch.setattr(reddit_scraper, 'MIN_POST_TEXT_LENGTH', 80)
+        return reddit_scraper.RedditScraper()
+
 
 def test_is_valid_post_valid(scraper):
     post = {
@@ -33,6 +50,7 @@ def test_is_valid_post_valid(scraper):
     }
     assert scraper._is_valid_post(post) is True
 
+
 def test_is_valid_post_over_18(scraper):
     post = {
         'id': 'post1',
@@ -44,6 +62,7 @@ def test_is_valid_post_over_18(scraper):
         'selftext': 'This is a long enough post body for testing purposes.' * 5
     }
     assert scraper._is_valid_post(post) is False
+
 
 def test_is_valid_post_is_video(scraper):
     post = {
@@ -57,6 +76,7 @@ def test_is_valid_post_is_video(scraper):
     }
     assert scraper._is_valid_post(post) is False
 
+
 def test_is_valid_post_low_upvote_ratio(scraper):
     post = {
         'id': 'post1',
@@ -68,6 +88,7 @@ def test_is_valid_post_low_upvote_ratio(scraper):
         'selftext': 'This is a long enough post body for testing purposes.' * 5
     }
     assert scraper._is_valid_post(post) is False
+
 
 def test_is_valid_post_already_processed(scraper):
     scraper.processed_ids.add('post1')
@@ -82,6 +103,7 @@ def test_is_valid_post_already_processed(scraper):
     }
     assert scraper._is_valid_post(post) is False
 
+
 def test_is_valid_post_stickied(scraper):
     post = {
         'id': 'post1',
@@ -93,6 +115,7 @@ def test_is_valid_post_stickied(scraper):
         'selftext': 'This is a long enough post body for testing purposes.' * 5
     }
     assert scraper._is_valid_post(post) is False
+
 
 def test_is_valid_post_not_self(scraper):
     post = {
@@ -106,6 +129,7 @@ def test_is_valid_post_not_self(scraper):
     }
     assert scraper._is_valid_post(post) is False
 
+
 def test_is_valid_post_short_text(scraper):
     post = {
         'id': 'post1',
@@ -117,6 +141,7 @@ def test_is_valid_post_short_text(scraper):
         'selftext': 'Too short'
     }
     assert scraper._is_valid_post(post) is False
+
 
 def test_is_valid_post_removed(scraper):
     post = {
@@ -130,6 +155,7 @@ def test_is_valid_post_removed(scraper):
     }
     assert scraper._is_valid_post(post) is False
 
+
 def test_is_valid_post_deleted(scraper):
     post = {
         'id': 'post1',
@@ -141,6 +167,7 @@ def test_is_valid_post_deleted(scraper):
         'selftext': '[deleted]'
     }
     assert scraper._is_valid_post(post) is False
+
 
 def test_is_valid_post_missing_fields(scraper):
     # Testing missing upvote_ratio defaults to 0
