@@ -2,8 +2,8 @@
 
 ![Logo](redishort.png)
 
-> **Project Status: Active Development / Evolution**
-> This project originally started as an autonomous python script scraping Reddit. It has now evolved into a **multi-tenant full-stack SaaS-like application** featuring a React frontend, a FastAPI backend, JWT authentication, AWS S3 storage, and RSS/URL-based content ingestion!
+> **Project Status: Active Development / Evolution**  
+> This project originally started as an autonomous Python script scraping Reddit. It has now evolved into a **multi-tenant full-stack application** featuring a React frontend, a FastAPI backend, JWT authentication, AWS S3 storage, and RSS/URL-based content ingestion.
 
 ---
 
@@ -26,8 +26,6 @@ All videos on this channel were generated and uploaded **completely autonomously
 ---
 
 ## 💼 Technical Highlights
-
-This project demonstrates proficiency across the stack:
 
 | Category             | Technologies & Skills                                                          |
 | -------------------- | ------------------------------------------------------------------------------ |
@@ -56,55 +54,112 @@ graph TD
 
 ### ✨ Key Features
 
-| Feature                       | Description                                                      |
-| ----------------------------- | ---------------------------------------------------------------- |
-| 🛡️ **User Accounts**           | Secure multi-tenant architecture with JWT authentication         |
-| 🧠 **Smart Content Ingestion**| Extract article text from RSS feeds and standard URLs            |
-| 🎯 **Retention Optimization** | Word-by-word subtitles with karaoke effect and neon progress bar |
-| 🗣️ **Dynamic Voices**         | Realistic voice cloning using Coqui TTS with gender variation    |
-| ☁️ **Cloud Storage**           | Final videos automatically uploaded to AWS S3 to save space      |
-| 🐳 **Dockerized**             | Simple consistent deployment with one command                    |
+| Feature                        | Description                                                      |
+| ------------------------------ | ---------------------------------------------------------------- |
+| 🛡️ **User Accounts**            | Secure multi-tenant architecture with JWT authentication         |
+| 🧠 **Smart Content Ingestion** | Extract article text from RSS feeds and standard URLs            |
+| 🎯 **Retention Optimization**  | Word-by-word subtitles with karaoke effect and neon progress bar |
+| 🗣️ **Dynamic Voices**          | Realistic voice cloning using Coqui TTS with gender variation    |
+| ☁️ **Cloud Storage**            | Final videos automatically uploaded to AWS S3 to save space      |
+| 🐳 **Dockerized**              | Simple consistent deployment with one command                    |
 
 ---
 
-## 🚀 Possible Upgrades & Roadmap
+## ✅ Testing Status (Current) + Coverage Goals
 
-We are continuously looking to improve the system. Potential future enhancements include:
+Current repository test suites:
 
-- **Asynchronous Task Queues**: Integrate **Celery** and Redis/RabbitMQ to handle video rendering and long-running AI tasks reliably outside the main web process.
-- **Automated Testing**: Add `pytest` for the backend and `Vitest` or `Jest` for the frontend to ensure stability across features.
-- **Enhanced Frontend Workflow**: Improve UI for reviewing AI-generated scripts and selecting different background videos manually.
-- **More Content Sources**: Add integrations for Twitter/X threads, HackerNews, and direct PDF/Text uploads.
-- **Multi-Platform Publishing**: Automatically schedule and post not just to YouTube, but also to TikTok and Instagram Reels via their APIs.
-- **Database Switch**: Move from SQLite/Local DBs to PostgreSQL for true production scaling.
+- `tests/test_content_ingester_ssrf.py` → SSRF and URL safety checks for ingestion logic.
+- `tests/test_workflow.py` → workflow drafting error-path behavior.
+- `tests/test_reddit_scraper.py` → legacy Reddit filtering rules.
+- `tests/test_youtube_uploader.py` → upload behavior with mocked YouTube API client.
+
+Current state in a fresh environment: tests are present and runnable with `pytest`, but collection fails until optional runtime dependencies are installed (e.g. `feedparser`, `boto3`, Google API libs), and one legacy test module mocking strategy conflicts with `requests` imports.
+
+Next practical coverage goals:
+
+1. Add lightweight dependency groups (or test-only extras) so CI can install a deterministic test stack.
+2. Expand API route tests for auth/projects/sources/workflow endpoints with `TestClient`.
+3. Add database-level tests around multi-tenant isolation and status transitions.
+4. Add frontend unit tests (Vitest + React Testing Library) for dashboard and workflow UX.
+
+---
+
+## 🧭 Legacy vs Current Code Paths
+
+### Current (actively used by API-driven app)
+
+- `app/main.py` → FastAPI app entrypoint.
+- `app/api/` → route modules for auth, projects, source ingestion, workflow actions.
+- `app/content_ingester.py` → URL/RSS ingestion used by API routes.
+- `app/workflow.py` → drafting + generation orchestration used by workflow routes.
+- `app/database/` and `app/models/` → persistence + domain models.
+
+### Legacy / standalone scripts (kept for V1 compatibility and utilities)
+
+- `main.py` → old autonomous script entrypoint.
+- `reddit_scraper.py` → Reddit-based source collector from V1 flow.
+- `text_processor.py`, `tts_generator.py`, `video_assembler.py`, `video_downloader.py`, `video_segmenter.py`, `youtube_uploader.py` → standalone modules from script-based pipeline, some still imported by newer orchestration but not exposed directly as API route modules.
+
+If you're building new backend features, prefer adding functionality under `app/` and exposing it through `app/api/*`.
+
+---
+
+## 🔌 Backend API Quick Start
+
+Run backend (Docker or local) and open interactive API docs:
+
+- Swagger UI: `http://localhost:8080/docs`
+- OpenAPI JSON: `http://localhost:8080/openapi.json`
+- Health check: `GET /health`
+
+Key endpoint groups (all mounted under `/api`):
+
+- **Auth**
+  - `POST /api/register`
+  - `POST /api/token`
+- **Projects**
+  - `GET /api/projects`
+  - `GET /api/projects/{project_id}`
+- **Sources**
+  - `GET /api/sources`
+  - `POST /api/sources/url`
+  - `POST /api/sources/rss`
+  - `POST /api/sources/{source_id}/fetch`
+- **Workflow**
+  - `POST /api/projects/{project_id}/draft`
+  - `PUT /api/projects/{project_id}/draft`
+  - `POST /api/projects/{project_id}/approve`
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 Redishort/
-├── app/                  # FastAPI Backend
-│   ├── api/              # Route controllers (auth, projects, workflows)
-│   ├── database/         # SQLAlchemy models and connection
-│   └── models/           # Pydantic domain schemas
-├── frontend/             # React/Vite Frontend
-│   ├── src/              # React components and views
-│   └── public/           # Static assets
-├── assets/               # Generated and raw video assets (local cache)
-├── prompts/              # System prompts for Gemini LLM
-├── config.py             # Central configuration
-├── main.py               # Legacy autonomous entry point (V1)
-├── app/main.py           # New FastAPI entry point (V2)
-├── content_ingester.py   # RSS and URL parsing logic
-├── text_processor.py     # LLM script generation
-├── tts_generator.py      # Text-to-speech
-├── video_assembler.py    # Video composition
-├── video_downloader.py   # Background video download
-├── video_segmenter.py    # Video processing
-├── youtube_uploader.py   # YouTube API upload
-├── docker-compose.yml    # Infrastructure setup
-└── Dockerfile            # Application container setup
+├── app/                         # FastAPI backend (current architecture)
+│   ├── api/                     # Route modules (auth/projects/sources/workflows)
+│   │   ├── auth.py
+│   │   ├── routes.py
+│   │   ├── source_routes.py
+│   │   └── workflow_routes.py
+│   ├── database/                # SQLAlchemy base/session/models wiring
+│   ├── models/                  # Pydantic/domain schemas
+│   ├── content_ingester.py      # URL + RSS ingestion logic (current path)
+│   ├── workflow.py              # Workflow orchestration (current path)
+│   └── main.py                  # FastAPI app entrypoint
+├── tests/                       # Pytest suites
+├── frontend/                    # React/Vite frontend
+├── assets/                      # Generated/raw media assets
+├── prompts/                     # Prompt templates for generation
+├── main.py                      # Legacy autonomous entrypoint (V1)
+├── reddit_scraper.py            # Legacy Reddit collector (V1)
+├── text_processor.py            # Shared/legacy generation module
+├── tts_generator.py             # Shared/legacy TTS module
+├── video_assembler.py           # Shared/legacy video assembly module
+├── youtube_uploader.py          # Shared/legacy YouTube upload module
+├── docker-compose.yml
+└── Dockerfile
 ```
 
 ---
@@ -146,7 +201,6 @@ docker-compose up --build -d
 ```
 
 The FastAPI backend will be available on `http://localhost:8080`.
-*(Note: To develop the frontend independently, navigate to `frontend/` and run `npm run dev`)*
 
 ---
 
