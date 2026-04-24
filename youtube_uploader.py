@@ -7,6 +7,7 @@ Supports scheduled publishing.
 
 import logging
 from pathlib import Path
+import os
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
@@ -34,7 +35,12 @@ def get_authenticated_service():
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(Request())
-                with open(TOKEN_FILE, "w") as t:
+                # Ensure the file has secure permissions if it already exists
+                if TOKEN_FILE.exists():
+                    os.chmod(TOKEN_FILE, 0o600)
+                # Securely open the file so only the owner can read/write
+                fd = os.open(TOKEN_FILE, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+                with os.fdopen(fd, "w") as t:
                     t.write(creds.to_json())
             except Exception as e:
                 logger.error(f"Failed to refresh credentials: {e}")

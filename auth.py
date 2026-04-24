@@ -53,7 +53,12 @@ try:
     flow.fetch_token(code=auth_code)
     creds = flow.credentials
 
-    with open(TOKEN_FILE, "w") as token:
+    # Ensure the file has secure permissions if it already exists
+    if TOKEN_FILE.exists():
+        os.chmod(TOKEN_FILE, 0o600)
+    # Securely open the file so only the owner can read/write
+    fd = os.open(TOKEN_FILE, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as token:
         token.write(creds.to_json())
 
     print(f"\n✅ Credentials saved successfully to {TOKEN_FILE}")
