@@ -18,7 +18,6 @@ Responsibilities:
 """
 
 import gc
-import torch
 import logging
 import time
 import whisper
@@ -27,7 +26,6 @@ import pytz
 from pathlib import Path
 from dotenv import load_dotenv
 import shutil
-import os
 import re
 
 load_dotenv()
