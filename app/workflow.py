@@ -3,47 +3,54 @@ import os
 import boto3
 from sqlalchemy.orm import Session
 from app.database import models
+from app.database.database import SessionLocal
 from app.models.domain import ContentItem
 import threading
 
 logger = logging.getLogger(__name__)
 
-def trigger_drafting(project_id: int, db: Session):
-    project = db.query(models.VideoProject).filter(models.VideoProject.id == project_id).first()
-    if not project or project.status != models.WorkflowState.NEW:
-        return
-
-    project.status = models.WorkflowState.DRAFTING
-    db.commit()
-
+def trigger_drafting(project_id: int):
+    db = SessionLocal()
     try:
-        from text_processor import TextProcessor
-        item = ContentItem(
-            source_id=project.source_id,
-            source_type=project.source_type,
-            title=project.title,
-            content_text=project.content_text,
-            author=project.author,
-            metadata=project.metadata_json or {}
-        )
+        project = db.query(models.VideoProject).filter(models.VideoProject.id == project_id).first()
+        if not project:
+            return
+        if project.status not in (models.WorkflowState.NEW, models.WorkflowState.DRAFTING):
+            return
 
-        processor = TextProcessor()
-        result = processor.process_story(item)
-        if not result:
-            raise Exception("AI failed to generate script")
+        project.status = models.WorkflowState.DRAFTING
+        db.commit()
 
-        project.script = result["script"]
-        project.youtube_title = result["descriptions"].get("youtube_short_title", "")
-        project.youtube_desc = result["descriptions"].get("youtube_short_desc", "")
-        project.narrator_gender = result["narrator_gender"]
-        project.status = models.WorkflowState.PENDING_APPROVAL
+        try:
+            from text_processor import TextProcessor
+            item = ContentItem(
+                source_id=project.source_id,
+                source_type=project.source_type,
+                title=project.title,
+                content_text=project.content_text,
+                author=project.author,
+                metadata=project.metadata_json or {}
+            )
 
-    except Exception as e:
-        logger.error(f"Drafting failed for project {project_id}: {e}")
-        project.error_message = str(e)
-        project.status = models.WorkflowState.FAILED
+            processor = TextProcessor()
+            result = processor.process_story(item)
+            if not result:
+                raise Exception("AI failed to generate script")
 
-    db.commit()
+            project.script = result["script"]
+            project.youtube_title = result["descriptions"].get("youtube_short_title", "")
+            project.youtube_desc = result["descriptions"].get("youtube_short_desc", "")
+            project.narrator_gender = result["narrator_gender"]
+            project.status = models.WorkflowState.PENDING_APPROVAL
+
+        except Exception as e:
+            logger.error(f"Drafting failed for project {project_id}: {e}")
+            project.error_message = str(e)
+            project.status = models.WorkflowState.FAILED
+
+        db.commit()
+    finally:
+        db.close()
 
 def trigger_generation_task(project_id: int):
     from app.database.database import SessionLocal

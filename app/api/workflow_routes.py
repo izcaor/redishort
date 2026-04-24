@@ -32,7 +32,7 @@ def start_drafting(
 
     project.status = models.WorkflowState.DRAFTING
     db.commit()
-    background_tasks.add_task(trigger_drafting, project_id, db)
+    background_tasks.add_task(trigger_drafting, project_id)
     return {"message": "Drafting started"}
 
 @router.put("/projects/{project_id}/draft")
